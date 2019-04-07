@@ -35,20 +35,48 @@ class Packet
   ubyte[] _buffer;
   size_t _readOffset;
   size_t _writeOffset;
+  size_t _size;
+  ushort _id;
 
   public:
+  ubyte[] finalize()
+  {
+    return _buffer.dup;
+  }
+
+  final:
   this(ubyte[] buffer)
   {
     _buffer = buffer;
-    skip(2);
+    _size = read!ushort;
     _id = read!ushort;
   }
 
   this(ushort size, ushort id)
   {
-    _buffer = new ubyte[size];
-    write!ushort(size);
+    _size = size;
+
+    _buffer = new ubyte[_size];
+    write!ushort(_size);
     write!ushort(id);
+  }
+
+  @property
+  {
+    ushort id()
+    {
+      return _id;
+    }
+
+    size_t physicalSize()
+    {
+      return _buffer ? _buffer.length : 0;
+    }
+
+    ushort virtualSize()
+    {
+      return _size;
+    }
   }
 
   T read(T)(size_t size = 0)
@@ -142,14 +170,10 @@ class Packet
 
   void expand(size_t amount)
   {
+    _size += cast(ushort)amount;
+
     _buffer ~= new ubyte[amount];
 
-    auto size = (*cast(ushort*)(_buffer.ptr));
-    (*cast(ushort*)(_buffer.ptr)) = size + amount;
-  }
-
-  ubyte[] finalize()
-  {
-    return _buffer.dup;
+    (*cast(ushort*)(_buffer.ptr)) = _size;
   }
 }
